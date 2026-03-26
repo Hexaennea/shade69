@@ -5,39 +5,44 @@ export const SUPABASE_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_DEFAULT_KE
 // ─── Column Map — edit ONLY values here if your columns differ ───────────────
 export const C = {
   // ── invoice table ──────────────────────────────────────────────────
-  inv_id: "id",
+  inv_id: "invoice_id",
   inv_number: "invoice_number",
   inv_value: "invoice_value",
   inv_gst: "gst",
   inv_tds: "tds",
   inv_date: "created_date",
-  inv_project_id: "project_id",         // FK → project.project_id
+  inv_project_id: "project_id",
 
   // ── project table ──────────────────────────────────────────────────
   proj_id: "project_id",
   proj_name: "project_name",
-  proj_customer: "customer_id",        // Supabase column stays "customer_id", sheet col is "Customer"
+  proj_customer: "customer_id",
 
   // ── customer table ─────────────────────────────────────────────────
-  cust_id: "customer_id",        // sheet "ID" → COLUMN_OVERRIDES maps to customer_id
+  cust_id: "customer_id",
   cust_name: "name",
 
   // ── employee table ─────────────────────────────────────────────────
-  emp_id: "employee_id",        // sheet "ID" → COLUMN_OVERRIDES maps to employee_id
+  emp_id: "employee_id",
   emp_name: "name",
   emp_salary: "monthly_salary",
   emp_basic: "basic",
   emp_hra: "hra",
-  emp_desig: "desgination",        // typo preserved from your schema
+  emp_desig: "desgination",
   emp_location: "location",
   emp_disc: "discontinued",
   emp_created_by: "created_by",
   emp_created_at: "created_date",
 
   // ── petty_cash table ───────────────────────────────────────────────
+  petty_id: "petty_cash_id",
+  petty_type: "type",
+  petty_payment_date: "payment_date",
+  petty_amount: "amount",
+  petty_remarks: "remarks",
+  petty_created_by: "created_by",
+  petty_created_date: "created_date",
   petty_month: "month",
-  petty_type: "payment_type",
-  petty_amount: "paid_amount",
 
   // ── salary table ───────────────────────────────────────────────────
   sal_id: "salary_id",
@@ -62,6 +67,15 @@ export const C = {
   sal_create_payslip: "create_payslip",
   sal_payslip: "payslip",
   sal_type: "type",
+
+  // ── received_payments table ──────────────────────────────────────────────
+  recv_id: "received_payments_id",
+  recv_invoice_id: "invoice_id",
+  recv_amount: "amount",
+  recv_date: "payment_date",
+  recv_remarks: "remarks",
+  recv_created_by: "created_by",
+  recv_created_date: "created_date",
 };
 
 // ─── Fetch helper ─────────────────────────────────────────────────────────────
