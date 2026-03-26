@@ -2,7 +2,7 @@
 
 export const rupee = (n) =>
   (n == null || n === "") ? "—" :
-  "₹" + Math.abs(Number(n) || 0).toLocaleString("en-IN");
+    "₹" + Math.abs(Number(n) || 0).toLocaleString("en-IN");
 
 export const niceDate = (d) => {
   if (!d) return "—";

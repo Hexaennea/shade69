@@ -2,25 +2,26 @@ import { useState, useEffect, useCallback } from "react";
 import "./styles.css";
 import { sbFetch, C, toMonthKey, toMonthLabel } from "./supabase.js";
 import Dashboard from "./Dashboard.jsx";
-import Detail    from "./Detail.jsx";
+import Detail from "./Detail.jsx";
 
 export default function App() {
-  const [rows,      setRows]      = useState([]);
+  const [rows, setRows] = useState([]);
   const [employees, setEmployees] = useState([]);
-  const [loading,   setLoading]   = useState(true);
-  const [error,     setError]     = useState(null);
-  const [selected,  setSelected]  = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [selected, setSelected] = useState(null);
 
   const load = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
-      const [invoices, projects, customers, emps, allPetty] = await Promise.all([
-        sbFetch("invoice",    `select=*&order=${C.inv_date}.desc`),
-        sbFetch("project",    `select=*`),
-        sbFetch("customer",   `select=*`),
-        sbFetch("employee",   `select=*`),
+      const [invoices, projects, customers, emps, allPetty, allSalaries] = await Promise.all([
+        sbFetch("invoice", `select=*&order=${C.inv_date}.desc`),
+        sbFetch("project", `select=*`),
+        sbFetch("customer", `select=*`),
+        sbFetch("employee", `select=*`),
         sbFetch("petty_cash", `select=*`),
+        sbFetch("salary", `select=*`),
       ]);
 
       // ── STEP 1: Build custMap ──────────────────────────────────────────
@@ -44,11 +45,11 @@ export default function App() {
       projects.forEach(p => {
         if (p[C.proj_id] == null) return;
 
-        const key      = String(p[C.proj_id]).trim();          // project_id
+        const key = String(p[C.proj_id]).trim();          // project_id
         const custIdVal = p[C.proj_customer] != null            // "customer" column value
           ? String(p[C.proj_customer]).trim()
           : null;
-        const custName  = custIdVal                             // look up name in custMap
+        const custName = custIdVal                             // look up name in custMap
           ? (custMap[custIdVal] || null)                        // null if not found → skip
           : null;
 
@@ -67,10 +68,10 @@ export default function App() {
       // ── STEP 3: Annotate invoices ──────────────────────────────────────
       // Flow: invoice.project_id → projMap → customers[] joined as string
       const annotated = invoices.map(inv => {
-        const projId   = inv[C.inv_project_id] != null
+        const projId = inv[C.inv_project_id] != null
           ? String(inv[C.inv_project_id]).trim()
           : null;
-        const proj     = projId ? (projMap[projId] || {}) : {};
+        const proj = projId ? (projMap[projId] || {}) : {};
         const custList = proj.customers && proj.customers.length
           ? proj.customers.join(", ")
           : "—";
@@ -94,28 +95,42 @@ export default function App() {
         pettyByMonth[k].push(r);
       });
 
-      // active employees salary total
-      const activeEmps = emps.filter(e => !e[C.emp_disc]);
-      const monthlySal = activeEmps.reduce((s, e) => s + Number(e[C.emp_salary] || 0), 0);
+      // group salaries by month
+      const salaryByMonth = {};
+      // Also map employee table basics into salary rows implicitly if needed? We will just pass the salary table rows to Detail.
+      allSalaries.forEach(r => {
+        const k = toMonthKey(r[C.sal_date]);
+        if (!k) return;
+        if (!salaryByMonth[k]) salaryByMonth[k] = [];
+        salaryByMonth[k].push(r);
+      });
+
+      const monthKeys = new Set([
+        ...Object.keys(byMonth),
+        ...Object.keys(pettyByMonth),
+        ...Object.keys(salaryByMonth),
+      ]);
 
       // build month rows
-      const monthRows = Object.keys(byMonth)
+      const monthRows = Array.from(monthKeys)
         .sort((a, b) => b.localeCompare(a))
         .map(key => {
-          const list         = byMonth[key];
-          const pettyRows    = pettyByMonth[key] || [];
-          const totalInvoice = list.reduce((s, i) => s + Number(i[C.inv_value]        || 0), 0);
-          const totalTDS     = list.reduce((s, i) => s + Number(i[C.inv_tds]          || 0), 0);
-          const totalPetty   = pettyRows.reduce((s, r) => s + Number(r[C.petty_amount] || 0), 0);
-          const totalSalary  = monthlySal;
-          const totalProfit  = totalInvoice - totalTDS - totalPetty - totalSalary;
-          const latestDate   = list.reduce((d, i) => {
+          const list = byMonth[key] || [];
+          const pettyRows = pettyByMonth[key] || [];
+          const salRows = salaryByMonth[key] || [];
+          const totalInvoice = list.reduce((s, i) => s + Number(i[C.inv_value] || 0), 0);
+          const totalTDS = list.reduce((s, i) => s + Number(i[C.inv_tds] || 0), 0);
+          const totalPetty = pettyRows.reduce((s, r) => s + Number(r[C.petty_amount] || 0), 0);
+          const totalSalary = salRows.reduce((s, r) => s + Number(r[C.sal_amount] || 0), 0);
+          const totalProfit = totalInvoice - totalTDS - totalPetty - totalSalary;
+          const latestDate = list.reduce((d, i) => {
             const nd = new Date(i[C.inv_date]);
             return nd > d ? nd : d;
           }, new Date(0)).toISOString();
+
           return {
             key, label: toMonthLabel(key),
-            invoices: list, pettyRows,
+            invoices: list, pettyRows, salRows,
             totalInvoice, totalTDS, totalPetty,
             totalSalary, totalProfit, latestDate,
           };
@@ -177,7 +192,7 @@ export default function App() {
           {selected && (
             <button className="back-btn" onClick={() => setSelected(null)}>
               <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
-                <path d="M19 12H5M12 5l-7 7 7 7"/>
+                <path d="M19 12H5M12 5l-7 7 7 7" />
               </svg>
               Dashboard
             </button>
